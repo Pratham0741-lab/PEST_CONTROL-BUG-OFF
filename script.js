@@ -150,18 +150,15 @@ function updateUITheme() {
         canvas.style.boxShadow = "0 0 50px rgba(0, 255, 255, 0.2)";
         canvas.style.borderColor = "#333";
     } else if (game.theme === "boss1") {
-        // Butcher: Pulsing Blood Border
         canvas.style.boxShadow = "0 0 100px rgba(255, 0, 0, 0.8)";
         canvas.style.borderColor = "#800";
     } else if (game.theme === "boss2") {
-        // Virus: Erratic Strobe
         canvas.style.boxShadow = "0 0 80px rgba(0, 255, 0, 0.8)";
         canvas.style.borderColor = "#0f0";
     } else if (game.theme === "boss3") {
-        // Void: Claustrophobic Tunnel (Darkness Closing In)
         const breath = 150 + Math.sin(game.frames * 0.05) * 50; 
         canvas.style.boxShadow = `inset 0 0 ${breath}px rgba(0, 0, 0, 1)`; 
-        canvas.style.borderColor = "#000"; 
+        canvas.style.borderColor = "#202"; 
     }
 }
 
@@ -187,7 +184,6 @@ function drawBossHealthBar() {
     ctx.shadowBlur = 10;
     ctx.shadowColor = color;
 
-    // Name Animations
     if (game.level === 1) {
         const sx = (Math.random() - 0.5) * 2;
         ctx.fillText(name, canvas.width / 2 + sx, y - 15);
@@ -258,116 +254,235 @@ function drawPoly(x, y, radius, sides, color, rotation = 0, stroke = false) {
 /* --- BOSS RENDERER --- */
 function drawBossModel(b) {
   if (game.level === 1) {
-    const bladeGrad = ctx.createLinearGradient(b.x - 100, b.y - 100, b.x + 100, b.y + 100);
-    bladeGrad.addColorStop(0, "#888");
-    bladeGrad.addColorStop(0.5, "#fff");
-    bladeGrad.addColorStop(1, "#333");
+    // === BOSS 1: THE SUN (Radiance Design, Hell-Grinder Theme) ===
+    
+    ctx.globalCompositeOperation = "lighter";
 
-    const coreGrad = ctx.createRadialGradient(b.x, b.y, 10, b.x, b.y, 60);
-    coreGrad.addColorStop(0, "#fff");
-    coreGrad.addColorStop(0.3, "#f00");
-    coreGrad.addColorStop(1, "#400");
+    // 1. The Sun Rays
+    ctx.strokeStyle = "#ff4500"; 
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#ff0000";
+    
+    ctx.beginPath();
+    const rayCount = 10;
+    for(let i=0; i<rayCount; i++) {
+        const angle = (i * (Math.PI * 2) / rayCount) + (game.frames * 0.02);
+        const startR = 50;
+        const endR = 100 + Math.sin(game.frames * 0.2 + i) * 20; 
+        
+        ctx.moveTo(b.x + Math.cos(angle)*startR, b.y + Math.sin(angle)*startR);
+        ctx.lineTo(b.x + Math.cos(angle)*endR, b.y + Math.sin(angle)*endR);
+    }
+    ctx.stroke();
 
-    drawPoly(b.x, b.y, 90, 8, "#221111", 0);
+    // 2. Wings
+    const wingColor = "rgba(255, 100, 0, 0.8)";
+    ctx.fillStyle = wingColor;
     
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.rotate(-game.frames * 0.15);
-    ctx.fillStyle = bladeGrad;
-    ctx.beginPath();
-    for (let i = 0; i < 12; i++) {
-        const angle = (i * 2 * Math.PI) / 12;
-        ctx.lineTo(Math.cos(angle) * 85, Math.sin(angle) * 85);
-        ctx.lineTo(Math.cos(angle + 0.2) * 40, Math.sin(angle + 0.2) * 40); 
+    const drawWing = (flip) => {
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        if(flip) ctx.scale(-1, 1);
+        ctx.rotate(Math.sin(game.frames * 0.05) * 0.1); 
+        
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-120, -100, -220, -50, -240, 0);
+        ctx.bezierCurveTo(-200, 50, -100, 120, 0, 60); 
+        ctx.fill();
+        ctx.restore();
     }
-    ctx.fill();
-    ctx.restore();
     
-    ctx.fillStyle = coreGrad;
+    drawWing(false); 
+    drawWing(true);  
+
+    // 3. Body
+    const sunGrad = ctx.createRadialGradient(b.x, b.y, 10, b.x, b.y, 60);
+    sunGrad.addColorStop(0, "#fff"); 
+    sunGrad.addColorStop(0.3, "#ffaa00"); 
+    sunGrad.addColorStop(1, "#ff0000"); 
+    
+    ctx.fillStyle = sunGrad;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 30 + Math.sin(game.frames * 0.5) * 5, 0, Math.PI*2);
+    ctx.arc(b.x, b.y, 50, 0, Math.PI*2);
     ctx.fill();
-    
-    if(game.frames % 5 === 0) {
-        particles.push({x: b.x - 30, y: b.y, vx: -2, vy: -2, life: 0.5, color: "#555"});
-        particles.push({x: b.x + 30, y: b.y, vx: 2, vy: -2, life: 0.5, color: "#555"});
-    }
+
+    // 4. Eyes
+    ctx.fillStyle = "#fff";
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(b.x - 15, b.y - 10, 8, 20, 0.2, 0, Math.PI*2);
+    ctx.ellipse(b.x + 15, b.y - 10, 8, 20, -0.2, 0, Math.PI*2);
+    ctx.fill();
+
+    resetGlow();
   } 
   else if (game.level === 2) {
-    ctx.globalCompositeOperation = "lighter";
-    const breath = Math.sin(game.frames * 0.05) * 10;
+    // === BOSS 2: THE SERAPH VIRUS (Grandmother Silk Design) ===
     
-    ctx.strokeStyle = "rgba(0, 255, 100, 0.8)";
-    ctx.lineWidth = 4;
+    ctx.globalCompositeOperation = "lighter";
+    
+    // 1. The Needle (Weapon)
+    ctx.save();
+    ctx.translate(b.x + 60, b.y);
+    ctx.rotate(Math.PI/4 + Math.sin(game.frames * 0.1) * 0.2); 
+    ctx.fillStyle = "#fff";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#0f0";
+    ctx.beginPath();
+    ctx.moveTo(0, -100);
+    ctx.lineTo(5, 100); 
+    ctx.lineTo(-5, 100);
+    ctx.fill();
+    ctx.strokeStyle = "#0f0";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, -90, 10, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. Silk Robes
+    const silkColor = "rgba(100, 255, 150, 0.6)"; 
+    ctx.fillStyle = silkColor;
     ctx.shadowBlur = 20;
     ctx.shadowColor = "#0f0";
     
     ctx.beginPath();
-    ctx.ellipse(b.x, b.y, 100 + breath, 30, game.frames * 0.02, 0, Math.PI*2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(b.x, b.y, 100 + breath, 30, -game.frames * 0.02 + Math.PI/2, 0, Math.PI*2);
-    ctx.stroke();
-
-    const cpuGrad = ctx.createRadialGradient(b.x, b.y, 5, b.x, b.y, 50);
-    cpuGrad.addColorStop(0, "#fff");
-    cpuGrad.addColorStop(0.5, "#0f0");
-    cpuGrad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.moveTo(b.x, b.y - 50); 
     
-    ctx.fillStyle = cpuGrad;
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, 40, 0, Math.PI*2);
+    const wave = Math.sin(game.frames * 0.08) * 15;
+    ctx.bezierCurveTo(b.x - 60, b.y, b.x - 100 + wave, b.y + 100, b.x - 20, b.y + 120);
+    ctx.lineTo(b.x + 20, b.y + 120);
+    ctx.bezierCurveTo(b.x + 100 - wave, b.y + 100, b.x + 60, b.y, b.x, b.y - 50);
     ctx.fill();
 
+    // 3. The Mask (Weaver Style)
+    const headGrad = ctx.createRadialGradient(b.x, b.y-40, 5, b.x, b.y-40, 30);
+    headGrad.addColorStop(0, "#fff");
+    headGrad.addColorStop(1, "#050");
+    
+    ctx.fillStyle = headGrad;
+    ctx.beginPath();
+    ctx.ellipse(b.x, b.y - 40, 25, 35, 0, 0, Math.PI*2);
+    ctx.fill();
+    
+    // Horns
     ctx.fillStyle = "#fff";
-    for(let i=0; i<4; i++) { 
-        const angle = (game.frames * 0.05) + (i * (Math.PI/2));
-        const dist = 70;
-        const bx = b.x + Math.cos(angle) * dist;
-        const by = b.y + Math.sin(angle) * dist;
-        ctx.fillRect(bx-5, by-5, 10, 10);
+    ctx.beginPath();
+    ctx.moveTo(b.x - 20, b.y - 60); ctx.lineTo(b.x - 30, b.y - 90); ctx.lineTo(b.x - 10, b.y - 70);
+    ctx.moveTo(b.x + 20, b.y - 60); ctx.lineTo(b.x + 30, b.y - 90); ctx.lineTo(b.x + 10, b.y - 70);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = "#0f0"; 
+    ctx.beginPath();
+    ctx.arc(b.x, b.y - 35, 6, 0, Math.PI*2); 
+    ctx.arc(b.x - 12, b.y - 45, 4, 0, Math.PI*2); 
+    ctx.arc(b.x + 12, b.y - 45, 4, 0, Math.PI*2);
+    ctx.arc(b.x - 8, b.y - 25, 3, 0, Math.PI*2);
+    ctx.arc(b.x + 8, b.y - 25, 3, 0, Math.PI*2);
+    ctx.fill();
+
+    // 4. Threads
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(let i=0; i<3; i++) {
+        const t = (game.frames * 0.05 + i) % (Math.PI*2);
+        const tx = b.x + Math.cos(t) * 60;
+        const ty = b.y + Math.sin(t*2) * 20;
+        ctx.moveTo(b.x, b.y);
+        ctx.quadraticCurveTo(b.x + (tx-b.x)/2, b.y - 50, tx, ty);
     }
+    ctx.stroke();
+
     resetGlow(); 
   } 
   else {
-    const diskGrad = ctx.createRadialGradient(b.x, b.y, 40, b.x, b.y, 120);
-    diskGrad.addColorStop(0, "rgba(0,0,0,0)");
-    diskGrad.addColorStop(0.4, "#204");
-    diskGrad.addColorStop(0.8, "#80f");
-    diskGrad.addColorStop(1, "rgba(0,0,0,0)");
+    // === BOSS 3: THE VOID SINGULARITY (Tormented Trobbio Style) ===
+    // Flamboyant, High Collar, Curved Horns/Antennae
     
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.rotate(game.frames * 0.02);
-    ctx.fillStyle = diskGrad;
-    ctx.beginPath();
-    for (let i = 0; i <= 360; i+=5) {
-        const r = 100 + Math.sin(i * 0.1 + game.frames * 0.1) * 10;
-        const rad = i * Math.PI/180;
-        ctx.lineTo(Math.cos(rad) * r, Math.sin(rad) * r);
-    }
-    ctx.fill();
-    ctx.restore();
+    // 1. Dramatic High Collar / Cloak (Flared Upward)
+    const cloakGrad = ctx.createLinearGradient(b.x, b.y - 100, b.x, b.y + 100);
+    cloakGrad.addColorStop(0, "#a0a"); // Magenta/Purple top
+    cloakGrad.addColorStop(0.5, "#404");
+    cloakGrad.addColorStop(1, "#101"); // Dark Void bottom
 
-    ctx.fillStyle = "#000";
-    ctx.shadowBlur = 50;
-    ctx.shadowColor = "#f0f"; 
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, 45, 0, Math.PI*2);
-    ctx.fill();
-    resetGlow();
-
-    const angle = Math.atan2(player.y - b.y, player.x - b.x);
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.rotate(angle);
+    ctx.fillStyle = cloakGrad;
     ctx.shadowBlur = 20;
-    ctx.shadowColor = "#fff";
-    ctx.fillStyle = "#fff";
+    ctx.shadowColor = "#80f"; 
+    
+    const flap = Math.sin(game.frames * 0.08) * 10;
+
     ctx.beginPath();
-    ctx.ellipse(15, 0, 12, 2, 0, 0, Math.PI*2); 
+    ctx.moveTo(b.x, b.y + 100); // Bottom point
+    // Left flare
+    ctx.bezierCurveTo(b.x - 60, b.y + 80, b.x - 120 - flap, b.y - 50, b.x - 40, b.y - 100); 
+    // Neck dip
+    ctx.quadraticCurveTo(b.x, b.y - 60, b.x + 40, b.y - 100);
+    // Right flare
+    ctx.bezierCurveTo(b.x + 120 + flap, b.y - 50, b.x + 60, b.y + 80, b.x, b.y + 100);
     ctx.fill();
-    ctx.restore();
+
+    // Inner lining contrast
+    ctx.fillStyle = "#200020";
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y + 100);
+    ctx.quadraticCurveTo(b.x - 30, b.y, b.x - 40, b.y - 100);
+    ctx.quadraticCurveTo(b.x, b.y - 60, b.x + 40, b.y - 100);
+    ctx.quadraticCurveTo(b.x + 30, b.y, b.x, b.y + 100);
+    ctx.fill();
+
+    // 2. The Head/Mask (Trobbio Style)
+    ctx.fillStyle = "#fff"; 
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#d0f";
+    
+    ctx.beginPath();
+    // Base of head
+    ctx.ellipse(b.x, b.y - 60, 20, 25, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Long Curved Antennae/Horns
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    
+    // Left Antenna
+    ctx.beginPath();
+    ctx.moveTo(b.x - 10, b.y - 80);
+    ctx.bezierCurveTo(b.x - 30, b.y - 120, b.x - 60, b.y - 100, b.x - 50, b.y - 150);
+    ctx.stroke();
+
+    // Right Antenna
+    ctx.beginPath();
+    ctx.moveTo(b.x + 10, b.y - 80);
+    ctx.bezierCurveTo(b.x + 30, b.y - 120, b.x + 60, b.y - 100, b.x + 50, b.y - 150);
+    ctx.stroke();
+
+    // 3. Eyes (Theatrical Expression)
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    // Angled eyes
+    ctx.moveTo(b.x - 8, b.y - 65); ctx.lineTo(b.x - 15, b.y - 55); ctx.lineTo(b.x - 5, b.y - 55);
+    ctx.moveTo(b.x + 8, b.y - 65); ctx.lineTo(b.x + 15, b.y - 55); ctx.lineTo(b.x + 5, b.y - 55);
+    ctx.fill();
+    
+    // 4. Floating Stage Orbs
+    drawGlow("#f0f", 20);
+    for(let i=0; i<3; i++) {
+        const t = (game.frames * 0.05 + i*2) % (Math.PI*2);
+        const ox = b.x + Math.sin(t) * 80;
+        const oy = b.y + Math.cos(t) * 30;
+        ctx.fillStyle = "#f0f";
+        ctx.beginPath();
+        ctx.arc(ox, oy, 5, 0, Math.PI*2);
+        ctx.fill();
+    }
+    
     resetGlow();
   }
 }
@@ -412,10 +527,22 @@ function drawBackground() {
     const pulse = Math.sin(game.frames * 0.2) * 30; 
     ctx.fillStyle = `rgb(${40 + pulse}, 0, 0)`; 
     ctx.fillRect(0, 0, w, h);
+    const grad = ctx.createRadialGradient(w/2, h/2, h/3, w/2, h/2, h);
+    grad.addColorStop(0, "transparent");
+    grad.addColorStop(1, "rgba(0,0,0,0.9)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,w,h);
   }
   else if (game.theme === "boss2") {
     ctx.fillStyle = "#000800"; 
     ctx.fillRect(0, 0, w, h);
+    // Digital Glitch Blocks
+    ctx.fillStyle = "rgba(0, 255, 0, 0.1)";
+    for(let i=0; i<20; i++) {
+        const nx = Math.random() * w;
+        const ny = Math.random() * h;
+        ctx.fillRect(nx, ny, Math.random() * 50, 2);
+    }
   }
   else if (game.theme === "boss3") {
     ctx.fillStyle = "#000"; 
@@ -483,8 +610,13 @@ function drawBackground() {
     let xOffset = 0;
     let yOffset = 0;
 
-    if (game.theme === "boss2" && Math.random() < 0.2) xOffset = (Math.random() - 0.5) * 50;
-    if (game.theme === "boss3") { xOffset = (Math.random() - 0.5) * 2; yOffset = (Math.random() - 0.5) * 2; }
+    if (game.theme === "boss2" && Math.random() < 0.2) {
+        xOffset = (Math.random() - 0.5) * 50;
+    }
+    if (game.theme === "boss3") {
+        xOffset = (Math.random() - 0.5) * 2;
+        yOffset = (Math.random() - 0.5) * 2;
+    }
 
     if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
     
@@ -865,7 +997,7 @@ function loop() {
         resetGlow();
     } 
     else if (game.theme === "boss2") {
-        // Virus: Glitch Text
+        // Virus: Glitch Text (RGB Split)
         const jitterY = (Math.random() - 0.5) * 5;
         let scoreTxt = `SCORE: ${game.score}`;
         let lvlTxt = `LEVEL: ${game.level}`;
@@ -940,8 +1072,4 @@ function loop() {
 }
 
 createStars();
-
 loop();
-
-loop();
-
